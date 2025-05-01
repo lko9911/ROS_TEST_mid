@@ -1,0 +1,14 @@
+{
+    "detected_objects": [
+        {
+            "index": 0,
+            "X": 0.0,
+            "Y": 0.0,
+            "Z": 50.0
+        }
+    ],
+    "image_path": [
+        "saved_frames\\left_image.jpg",
+        "saved_frames\\right_image.jpg"
+    ]
+}
