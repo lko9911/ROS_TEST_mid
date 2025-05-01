@@ -1,4 +1,4 @@
-import rospy  # ROS 퍼블리시를 위한 라이브러리
+import rclpy  # ROS 퍼블리시를 위한 라이브러리
 from ggul_bot.Strawberry_Vision import detect_and_save
 from ggul_bot.utils import load_detected_objects, print_detected_objects
 from ggul_bot.classify_disease import detect_and_show
@@ -40,7 +40,7 @@ def main():
                 print(f"[{i}] ROS2 퍼블리시 시작...")
                 publish_detected_object(json_path)
                 print(f"[{i}] 퍼블리시 완료.")
-            except rospy.ROSInterruptException:
+            except rclpy.ROSInterruptException:
                 print(f"[{i}] ROS 퍼블리시 중단됨 (ROSInterruptException).")
             except Exception as e:
                 print(f"[{i}] ROS 퍼블리시 실패: {e}")
