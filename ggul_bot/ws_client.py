@@ -20,7 +20,6 @@ async def send_detected_objects():
     async with websockets.connect(uri) as websocket:
         for obj in detected["detected_objects"]:
             data = {
-                "index": obj["index"],
                 "X": obj["X"],
                 "Y": obj["Y"],
                 "Z": obj["Z"]
