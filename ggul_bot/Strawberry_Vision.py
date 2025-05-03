@@ -72,7 +72,6 @@ def detect_and_save(model_path="model/best3.pt", npz_path="stereo_calibration_re
     # 웹캠 열기
     cap = cv2.VideoCapture(0)
 
-
     detected_objects = []
     last_save_time = time.time()
 

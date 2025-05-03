@@ -1,8 +1,8 @@
-import rclpy  # ROS 퍼블리시를 위한 라이브러리
 from ggul_bot.Strawberry_Vision import detect_and_save
-from ggul_bot.utils import load_detected_objects, print_detected_objects
+from ggul_bot.json_test import print_detected_objects_test
 from ggul_bot.classify_disease import detect_and_show
-from ggul_bot.ROS_node import publish_detected_object
+from ggul_bot.ws_client import load_detected_objects, send_detected_objects
+import asyncio
 
 def main():
     yolo_path = "model/yolov10x.pt"
@@ -15,17 +15,16 @@ def main():
     try:
         while True:
             print(f"\n========== [{i}번째 주기 시작] ==========")
-            
+
             # 1. YOLO 탐지 및 3D 위치 추정
             print(f"[{i}] YOLO 탐지 및 3D 위치 추정 중...")
-            detect_and_save(model_path=yolo_path, npz_path=npz_path, save_path=json_path, time_interval=20)
-            
+            detect_and_save(model_path=yolo_path, npz_path=npz_path, save_path=json_path, time_interval=10000)
+
             # 2. 탐지 결과 로드 및 출력
             detected_objects = load_detected_objects(json_path)
             print(f"[{i}] 탐지된 객체 정보:")
-            print_detected_objects(detected_objects)
+            print_detected_objects_test(detected_objects)
 
-            # 탐지된 객체가 없으면 스킵
             if not detected_objects["detected_objects"]:
                 print(f"[{i}] 탐지된 객체가 없습니다. 다음 주기로 넘어갑니다.")
                 i += 1
@@ -33,22 +32,19 @@ def main():
 
             # 3. 질병 분류 수행
             print(f"[{i}] 질병 분류 모델 실행 중...")
-            detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10000)
+            detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10)
 
-            # 4. ROS2로 퍼블리시
+            # 3. WebSocket 통해 ROS2에 전송
+            print(f"[{i}] WebSocket을 통해 ROS2에 전송 중...")
             try:
-                print(f"[{i}] ROS2 퍼블리시 시작...")
-                publish_detected_object(json_path)
-                print(f"[{i}] 퍼블리시 완료.")
-            except rclpy.ROSInterruptException:
-                print(f"[{i}] ROS 퍼블리시 중단됨 (ROSInterruptException).")
+                asyncio.run(send_detected_objects())  # 비동기 함수 실행
             except Exception as e:
-                print(f"[{i}] ROS 퍼블리시 실패: {e}")
+                print(f"[{i}] WebSocket 전송 중 오류 발생: {e}")
 
             i += 1
 
     except KeyboardInterrupt:
-        print("\n[종료] 사용자에 의해 중단되었습니다.")
+        print("🔚 프로그램 종료됨.")
 
 if __name__ == "__main__":
     main()
