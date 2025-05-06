@@ -131,8 +131,8 @@ def detect_and_save(model_path="model/best3.pt", npz_path="stereo_calibration_re
                 depth_left = depth_calculate(center_y, center_x, disparity, Q)
 
                 # Z 값 초기화 (기본 값 설정)
-                X = 0.00
-                Y = 0.00
+                X = center_x
+                Y = center_y
                 Z = 50.00 
                 
                 '''
