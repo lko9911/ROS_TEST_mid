@@ -135,7 +135,8 @@ def detect_and_save(model_path="model/best3.pt", npz_path="stereo_calibration_re
                 Y = 0.00
                 Z = 50.00 
                 
-
+                '''
+                # 스테레오 3D
                 if depth_left is not None:
                     X,Y,Z = depth_left 
                     label_left = f"Z: {Z:.2f} cm"
@@ -143,6 +144,20 @@ def detect_and_save(model_path="model/best3.pt", npz_path="stereo_calibration_re
                     label_left = f"Z: {Z:.2f} cm" 
 
                 class_name = class_names[int(class_indices_left[i])]  
+                '''
+
+                
+                # 60cm 전방 대상
+                if depth_left is not None:
+                    X,Y,Z = depth_left
+                    X = center_x
+                    Y = center_y
+                    label_left = f"Z: {Z:.2f} cm"
+                else:
+                    label_left = f"Z: {Z:.2f} cm" 
+
+                class_name = class_names[int(class_indices_left[i])]  
+                
 
                 # 객체 정보 추가
                 detected_objects.append({
