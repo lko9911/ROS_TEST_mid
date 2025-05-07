@@ -10,11 +10,12 @@ async def main_loop():
     keras_path = "model/best_model.keras"
     json_path = "detected_objects.json"
 
-    i = 1
+    queue = asyncio.Queue()  # 큐 생성
 
     # WebSocket 서버는 처음에 한 번 실행
-    asyncio.create_task(start_joint_state_server())
+    asyncio.create_task(start_joint_state_server(queue))
 
+    i = 1
     try:
         while True:
             print(f"\n========== [{i}번째 주기 시작] ==========")
@@ -32,8 +33,8 @@ async def main_loop():
                 i += 1
                 continue
 
-            print(f"[{i}] 질병 분류 모델 실행 중...")
-            detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10)
+            #print(f"[{i}] 질병 분류 모델 실행 중...")
+            #detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10)
 
             print(f"[{i}] WebSocket을 통해 ROS2에 전송 중...")
             try:
@@ -41,10 +42,21 @@ async def main_loop():
             except Exception as e:
                 print(f"[{i}] WebSocket 통신 중 오류 발생: {e}")
 
+            try:
+                joint_data = await asyncio.wait_for(queue.get(), timeout=10)  # 5초 타임아웃 설정
+                print(f"[{i}] 수신된 조인트 상태: {joint_data}")
+            except asyncio.TimeoutError:
+                print(f"[{i}] 큐에서 데이터를 기다리는 동안 타임아웃 발생.")
+
+
+
             i += 1
+            
+            await asyncio.sleep(10)  # 주기적 실행 (10초마다)
 
     except KeyboardInterrupt:
         print("🔚 프로그램 종료됨.")
 
+# 서버 실행
 if __name__ == "__main__":
     asyncio.run(main_loop())

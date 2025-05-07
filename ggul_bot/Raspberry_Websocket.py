@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import json
+from functools import partial
 
 # ───── JSON 로드 함수 ─────
 def load_detected_objects(file_path="detected_objects.json"):
@@ -30,20 +31,28 @@ async def send_detected_objects():
             print(f"[index {obj['index']}] 서버 응답: {response}")
 
 # ───── 서버: 조인트 상태 수신 ─────
-async def receive_joint_states(websocket):
-    async for message in websocket:
-        try:
-            data = json.loads(message)
-            print("🤖 Joint States Received:", data)
-            # 필요 시 파일로 저장하거나 제어 로직 삽입 가능
-        except json.JSONDecodeError:
-            print("⚠️ 잘못된 JSON 수신:", message)
+async def receive_joint_states(websocket,queue):
+    try:
+        async for message in websocket:
+            try:
+                data = json.loads(message)
+                print("🤖 Joint States Received:", data)
+                await queue.put(data)  # 데이터 큐에 넣기
+                print(f"✅ 데이터 큐에 넣음: {data}")
+            except json.JSONDecodeError:
+                print("⚠️ 잘못된 JSON 수신:", message)
+    except websockets.exceptions.ConnectionClosed as e:
+        print(f"⚠️ WebSocket 연결 종료: {e}")
 
 # ───── 조인트 상태 서버 실행 ─────
-async def start_joint_state_server():
-    server = await websockets.serve(receive_joint_states, "0.0.0.0", 8766)
+async def start_joint_state_server(queue):
+ 
+    server = await websockets.serve(partial(receive_joint_states, queue=queue), "0.0.0.0", 8766)
     print("🟢 조인트 상태 수신 서버 실행 중 (port 8766)...")
-    await server.wait_closed()
+    try:
+        await server.wait_closed()
+    except asyncio.CancelledError:
+        print("⚠️ 서버가 정상 종료되었습니다.")
 
 # ───── 통합 실행 ─────
 async def main():
