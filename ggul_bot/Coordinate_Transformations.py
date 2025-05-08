@@ -89,7 +89,7 @@ def transform_coordinates60(
     for obj in data["detected_objects"]:
         # 픽셀 좌표를 미터로 변환 (기존 로직)
         x = (472 - obj["X"]) / 100
-        y = (406 - obj["Y"]) / 100
+        y = -(406 - obj["Y"]) / 100
         z = obj["Z"] / 100
         P_cam = np.array([x, y, z])
 
