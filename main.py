@@ -1,6 +1,6 @@
 from ggul_bot.Strawberry_Vision import detect_and_save
-from ggul_bot.coord_trans import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
-from ggul_bot.classify_disease import detect_and_show
+from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
+from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
 import asyncio
 
