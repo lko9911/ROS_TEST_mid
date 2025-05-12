@@ -3,6 +3,7 @@ from ggul_bot.Coordinate_Transformations import load_detected_objects_test, prin
 from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
 import asyncio
+import json
 
 async def main_loop():
     yolo_path = "model/yolov10x.pt"
@@ -12,7 +13,7 @@ async def main_loop():
 
     queue = asyncio.Queue()  # 큐 생성
 
-    # WebSocket 서버는 처음에 한 번 실행
+    # WebSocket 서버 실행 (큐 공유)
     asyncio.create_task(start_joint_state_server(queue))
 
     i = 1
@@ -31,10 +32,11 @@ async def main_loop():
             if not detected_objects["detected_objects"]:
                 print(f"[{i}] 탐지된 객체가 없습니다. 다음 주기로 넘어갑니다.")
                 i += 1
+                await asyncio.sleep(10)
                 continue
 
-            #print(f"[{i}] 질병 분류 모델 실행 중...")
-            #detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10)
+            # print(f"[{i}] 질병 분류 모델 실행 중...")
+            # detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10)
 
             print(f"[{i}] WebSocket을 통해 ROS2에 전송 중...")
             try:
@@ -42,21 +44,32 @@ async def main_loop():
             except Exception as e:
                 print(f"[{i}] WebSocket 통신 중 오류 발생: {e}")
 
+            # 큐에서 수신된 모든 조인트 데이터 수집
+            joint_data_list = []
             try:
-                joint_data = await asyncio.wait_for(queue.get(), timeout=10)  # 5초 타임아웃 설정
-                print(f"[{i}] 수신된 조인트 상태: {joint_data}")
+                while True:
+                    joint_data = await asyncio.wait_for(queue.get(), timeout=1)
+                    joint_data_list.append(joint_data)
             except asyncio.TimeoutError:
-                print(f"[{i}] 큐에서 데이터를 기다리는 동안 타임아웃 발생.")
+                pass  # 큐가 비었을 경우 멈춤
 
-
+            if joint_data_list:
+                print(f"[{i}] 수신된 조인트 상태 {len(joint_data_list)}개:")
+                for idx, jd in enumerate(joint_data_list, 1):
+                    print(f"  {idx}: {jd}")
+                # 저장
+                with open("joint_states_log.json", "a") as f:
+                    for jd in joint_data_list:
+                        f.write(json.dumps(jd) + "\n")
+            else:
+                print(f"[{i}] 이번 주기에는 조인트 상태가 도착하지 않았습니다.")
 
             i += 1
-            
-            await asyncio.sleep(10)  # 주기적 실행 (10초마다)
+            await asyncio.sleep(10)  # 주기적 실행
 
     except KeyboardInterrupt:
         print("🔚 프로그램 종료됨.")
 
-# 서버 실행
+# 메인 실행
 if __name__ == "__main__":
     asyncio.run(main_loop())
