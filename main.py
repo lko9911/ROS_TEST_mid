@@ -20,6 +20,11 @@ async def main_loop():
     i = 1
     try:
         while True:
+            # json 초기화
+            with open("joint_states_log.json", "w") as f:
+                pass 
+
+
             print(f"\n========== [{i}번째 주기 시작] ==========")
 
             #-----------------Strawberry-Vision 실행부------------------#
@@ -73,6 +78,7 @@ async def main_loop():
             #-----------------로봇팔 동작부------------------#
             log_file_path = "joint_states_log.json"
             #read_and_send_joint_values(log_file_path)
+
 
             i += 1
             await asyncio.sleep(10)  # 주기적 실행
