@@ -107,6 +107,7 @@ def read_and_send_joint_values(log_path):
                 if joint_values and len(joint_values) == 6:
                     print(f"[INFO] Line {line_num}: Sending joint values {joint_values}")
                     process_joint_angles(joint_values)
+                    
                 else:
                     print(f"[WARNING] Line {line_num}: Invalid or missing 'joint_values'")
             except json.JSONDecodeError as e:

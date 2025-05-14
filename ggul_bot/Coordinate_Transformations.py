@@ -58,8 +58,8 @@ def transform_coordinates60(
     transformed = []
     for obj in data["detected_objects"]:
         # 픽셀 좌표를 미터로 변환 (기존 로직)
-        x = (472 - obj["X"]) / 1000  # 100 픽셀은 10cm를 의미 즉 '100'을 0.1로 변환 해야 함
-        y = -(406 - obj["Y"]) / 1000
+        x = (obj["X"] - 472) / 1000  # 100 픽셀은 10cm를 의미 즉 '100'을 0.1로 변환 해야 함
+        y = -(obj["Y"] - 406) / 1000
         z = obj["Z"] / 100 # 단위 10은 10cm를 의미 즉'10'을 0.1로 변환해야 함
         P_cam = np.array([x, y, z])
 

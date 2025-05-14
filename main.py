@@ -2,7 +2,8 @@ from ggul_bot.Strawberry_Vision import detect_and_save,test_mode, test_mode2
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
-#from ggul_bot.Robot_Operation import read_and_send_joint_values, process_joint_angles
+###from ggul_bot.Robot_Operation import process_joint_angles
+###from ggul_bot.Pollination import setup_motor, run_motor, cleanup_motor
 import asyncio
 import json
 
@@ -13,6 +14,7 @@ async def main_loop():
     json_path = "detected_objects.json"
 
     queue = asyncio.Queue()  # 큐 생성
+    ###pwm = setup_motor()  # ✅ 모터 초기화
 
     # WebSocket 서버 실행 (큐 공유)
     asyncio.create_task(start_joint_state_server(queue))
@@ -79,10 +81,29 @@ async def main_loop():
             else:
                 print(f"[{i}] 이번 주기에는 조인트 상태가 도착하지 않았습니다.")
 
+            '''
             #-----------------4. 로봇팔 + 수분 장치 구동 부분----------------#
             log_file_path = "joint_states_log.json"
-            #read_and_send_joint_values(log_file_path)
+            with open(log_file_path, 'r') as f:
+                for line_num, line in enumerate(f, 1):
+                    try:
+                        data = json.loads(line)
+                        joint_values = data.get("joint_values")
+                        if joint_values and len(joint_values) == 6:
+                            print(f"[INFO] Line {line_num}: Sending joint values {joint_values}")
+                            # ✅ 로봇팔 작동
+                            process_joint_angles(joint_values)
+                            # ✅ 모터 작동
+                            await run_motor(pwm, duration=5, power=80)
+                            
+                        else:
+                            print(f"[WARNING] Line {line_num}: Invalid or missing 'joint_values'")
+                    except json.JSONDecodeError as e:
+                        print(f"[ERROR] Line {line_num}: JSON decode error: {e}")
 
+            # ✅ 로봇팔 초기화
+            process_joint_angles(0,0,0,0,0,0)
+            '''
             #-----------------5. 이동 부분----------------#
 
             i += 1
@@ -90,6 +111,9 @@ async def main_loop():
 
     except KeyboardInterrupt:
         print("🔚 프로그램 종료됨.")
+    ### finally:
+       ### cleanup_motor(pwm)
+       ### print("🔌 GPIO 리셋 완료")
 
 # 메인 실행
 if __name__ == "__main__":
