@@ -47,7 +47,7 @@ def detect_and_save(model_path="model/best3.pt", npz_path="stereo_calibration_re
     R = data['R']
     T = data['T']
 
-    # resize = 0.7 기준준
+    # resize = 0.7 기준
     new_dim = (896, 672)
 
     # 스테레오 정합 및 리매핑
@@ -211,6 +211,73 @@ def detect_and_save(model_path="model/best3.pt", npz_path="stereo_calibration_re
 
             print(f"현재 프레임의 탐지된 객체 정보가 '{save_path}' 파일에 저장되었습니다.")
             break
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# 마우스 클릭 콜백 (지역 변수 리스트를 param으로 전달)
+def mouse_callback(event, x, y, flags, param):
+    image_save_dir = "saved_frames" 
+    os.makedirs(image_save_dir, exist_ok=True)
+    detected_objects = param["detected_objects"]
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print(f"📌 마우스 클릭 위치: X={x}, Y={y}")
+        Z = 60.0
+        index = len(detected_objects)
+
+        detected_objects.append({
+            "index": index,
+            "X": float(x),
+            "Y": float(y),
+            "Z": float(Z)
+        })
+        print(f"✅ 객체 저장: {detected_objects[-1]}")
+
+        left_image_filename = f"left_image.jpg"
+        right_image_filename = f"right_image.jpg"
+
+        # 파일 경로 설정
+        left_image_path = os.path.join(image_save_dir, left_image_filename)
+        right_image_path = os.path.join(image_save_dir, right_image_filename)
+
+        save_path="detected_objects.json"
+        # 저장
+        save_data = {
+            "detected_objects": detected_objects,
+            "image_path": [left_image_path, right_image_path]
+        }
+        with open(save_path, "w") as f:
+            json.dump(save_data, f, indent=4)
+        print(f"💾 JSON 저장 완료 → {save_path}")
+
+def test_mode():
+    cap = cv2.VideoCapture(0)
+    new_dim = (896, 672)
+    detected_objects = []  # 지역 변수로 선언
+
+    # param으로 넘길 딕셔너리 생성
+    callback_param = {"detected_objects": detected_objects}
+
+    cv2.namedWindow('Test_image')
+    cv2.setMouseCallback('Test_image', mouse_callback, callback_param)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("❌ 프레임을 읽을 수 없습니다.")
+            break
+
+        height, width, _ = frame.shape
+        img_left = frame[:, :width // 2]
+        img_right = frame[:, width // 2:]
+
+        img_left_resized = cv2.resize(img_left, new_dim)
+        img_right_resized = cv2.resize(img_right, new_dim)
+
+        cv2.imshow('Test_image', img_left_resized)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

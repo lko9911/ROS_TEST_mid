@@ -1,4 +1,4 @@
-from ggul_bot.Strawberry_Vision import detect_and_save
+from ggul_bot.Strawberry_Vision import detect_and_save,test_mode
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
@@ -27,10 +27,12 @@ async def main_loop():
 
             print(f"\n========== [{i}번째 주기 시작] ==========")
 
-            #-----------------Strawberry-Vision 실행부------------------#
+            #-----------------1. Strawberry-Vision 실행부------------------#
             print(f"[{i}] YOLO 탐지 및 3D 위치 추정 중...")
-            detect_and_save(model_path=yolo_path, npz_path=npz_path, save_path=json_path, time_interval=10000)
+            #detect_and_save(model_path=yolo_path, npz_path=npz_path, save_path=json_path, time_interval=10000)
+            test_mode()
 
+            #-----------------2. 좌표 변환------------------#
             transform_coordinates60(json_path)
             print(f"[{i}] 탐지된 객체 정보:")
             detected_objects = load_detected_objects_test(json_path)
@@ -45,7 +47,9 @@ async def main_loop():
             # print(f"[{i}] 질병 분류 모델 실행 중...")
             # detect_and_show(model_path=yolo_path, npz_path=npz_path, keras_path=keras_path, time_end=10)
 
-            #-----------------ROS2에 내용 전송------------------#
+            #-----------------3. IK 변환 - ROS2 통신------------------#
+
+            ##-----------------ROS2에 내용 전송------------------##
             print(f"[{i}] WebSocket을 통해 ROS2에 전송 중...")
             try:
                 await send_detected_objects()
@@ -53,7 +57,7 @@ async def main_loop():
                 print(f"[{i}] WebSocket 통신 중 오류 발생: {e}")
 
 
-            #-----------------ROS2에 내용 수신신부------------------#
+            ##-----------------ROS2에 내용 수신부----------------##
 
             # 큐에서 수신된 모든 조인트 데이터 수집
             joint_data_list = []
@@ -75,10 +79,11 @@ async def main_loop():
             else:
                 print(f"[{i}] 이번 주기에는 조인트 상태가 도착하지 않았습니다.")
 
-            #-----------------로봇팔 동작부------------------#
+            #-----------------4. 로봇팔 + 수분 장치 구동 부분----------------#
             log_file_path = "joint_states_log.json"
             #read_and_send_joint_values(log_file_path)
 
+            #-----------------5. 이동 부분----------------#
 
             i += 1
             await asyncio.sleep(10)  # 주기적 실행
