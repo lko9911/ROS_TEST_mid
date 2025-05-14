@@ -284,3 +284,60 @@ def test_mode():
 
     cap.release()
     cv2.destroyAllWindows()
+
+def draw_grid(img, origin_x=472, origin_y=406, spacing=100):
+    img_with_grid = img.copy()
+    height, width, _ = img.shape
+
+    cv2.circle(img_with_grid, (origin_x, origin_y), radius=4, color=(0, 0, 255), thickness=-1)
+    cv2.putText(img_with_grid, "Origin (472,406)", (origin_x + 5, origin_y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+
+    for x in range(origin_x, width, spacing):
+        cv2.line(img_with_grid, (x, 0), (x, height), (0, 255, 0), 1)
+        cv2.putText(img_with_grid, str(x), (x + 2, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+    for x in range(origin_x, -1, -spacing):
+        cv2.line(img_with_grid, (x, 0), (x, height), (0, 255, 0), 1)
+        cv2.putText(img_with_grid, str(x), (x + 2, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+
+    for y in range(origin_y, height, spacing):
+        cv2.line(img_with_grid, (0, y), (width, y), (255, 0, 0), 1)
+        cv2.putText(img_with_grid, str(y), (5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+    for y in range(origin_y, -1, -spacing):
+        cv2.line(img_with_grid, (0, y), (width, y), (255, 0, 0), 1)
+        cv2.putText(img_with_grid, str(y), (5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+
+    return img_with_grid
+
+
+def test_mode2():
+    cap = cv2.VideoCapture(0)
+    new_dim = (896, 672)
+    detected_objects = []
+
+    callback_param = {"detected_objects": detected_objects}
+    cv2.namedWindow('Test_image')
+    cv2.setMouseCallback('Test_image', mouse_callback, callback_param)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("❌ 프레임을 읽을 수 없습니다.")
+            break
+
+        height, width, _ = frame.shape
+        img_left = frame[:, :width // 2]
+        img_right = frame[:, width // 2:]
+
+        img_left_resized = cv2.resize(img_left, new_dim)
+
+        # 👉 격자 추가
+        img_with_grid = draw_grid(img_left_resized)
+
+        cv2.imshow('Test_image', img_with_grid)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()

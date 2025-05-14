@@ -1,4 +1,4 @@
-from ggul_bot.Strawberry_Vision import detect_and_save,test_mode
+from ggul_bot.Strawberry_Vision import detect_and_save,test_mode, test_mode2
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
@@ -30,7 +30,7 @@ async def main_loop():
             #-----------------1. Strawberry-Vision 실행부------------------#
             print(f"[{i}] YOLO 탐지 및 3D 위치 추정 중...")
             #detect_and_save(model_path=yolo_path, npz_path=npz_path, save_path=json_path, time_interval=10000)
-            test_mode()
+            test_mode2()
 
             #-----------------2. 좌표 변환------------------#
             transform_coordinates60(json_path)
