@@ -1,49 +1,38 @@
-import lgpio
+# pollination_motor_gpiozero.py
+from gpiozero import PWMOutputDevice, DigitalOutputDevice
+from signal import pause
 import asyncio
 
-# 핀 정의
-IN1 = 17
-IN2 = 27
-ENA = 18
+# 핀 설정 (BCM 번호)
+IN1 = DigitalOutputDevice(17)
+IN2 = DigitalOutputDevice(27)
+ENA = PWMOutputDevice(18, frequency=1000)
 
-# 핀 모드 설정 및 PWM 초기화
-def setup_motor():
-    h = lgpio.gpiochip_open(0)  # /dev/gpiochip0 열기
-    lgpio.gpio_claim_output(h, IN1, 0)
-    lgpio.gpio_claim_output(h, IN2, 0)
-    lgpio.gpio_claim_output(h, ENA, 0)
+# 모터 작동 함수 (비동기)
+async def run_motor(duration=5, power=0.8):
+    print(f"💧 수분 펌프 작동: {duration}초 (출력: {int(power * 100)}%)")
 
-    # PWM 시작 (채널 0, dutyCycle은 0~1 사이)
-    lgpio.tx_pwm(h, ENA, 1000, 0)  # 1kHz, duty 0%
-    return h
-
-# 모터 작동 함수
-async def run_motor(h, duration=5, power=80):
-    print(f"💧 수분 펌프 작동: {duration}초")
-
-    lgpio.gpio_write(h, IN1, 1)
-    lgpio.gpio_write(h, IN2, 0)
-    lgpio.tx_pwm(h, ENA, 1000, power / 100)  # dutyCycle: 0~1
+    # 정방향 회전
+    IN1.on()
+    IN2.off()
+    ENA.value = power  # 0.0 ~ 1.0
 
     await asyncio.sleep(duration)
 
-    lgpio.gpio_write(h, IN1, 0)
-    lgpio.gpio_write(h, IN2, 0)
-    lgpio.tx_pwm(h, ENA, 1000, 0)
+    # 정지
+    #ENA.value = 0
+    ENA.off()
+    IN1.off()
+    IN2.off()
+
+    await asyncio.sleep(duration+10)
 
     print("💧 수분 펌프 정지 완료")
 
-# GPIO 정리
-def cleanup_motor(h):
-    lgpio.gpiochip_close(h)
-
-
+# 메인
 async def main():
-    h = setup_motor()
-    try:
-        await run_motor(h, duration=5, power=80)
-    finally:
-        cleanup_motor(h)
+    await run_motor(duration=5, power=0.75)
 
+# 실행
 if __name__ == "__main__":
     asyncio.run(main())
