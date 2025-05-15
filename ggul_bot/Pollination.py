@@ -33,3 +33,13 @@ async def run_motor(pwm, duration=5, power=80):
 def cleanup_motor(pwm):
     pwm.stop()
     GPIO.cleanup()
+
+async def main():
+    pwm = setup_motor()
+    try:
+        await run_motor(pwm, duration=5, power=80)  # 원하는 duration과 power로 설정 가능
+    finally:
+        cleanup_motor(pwm)
+
+if __name__ == "__main__":
+    asyncio.run(main())
