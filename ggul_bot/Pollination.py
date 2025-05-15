@@ -1,45 +1,49 @@
-# motor_control.py
-import RPi.GPIO as GPIO
+import lgpio
 import asyncio
 
 # 핀 정의
 IN1 = 17
 IN2 = 27
-ENA = 22
+ENA = 18
 
-# GPIO 초기화 함수
+# 핀 모드 설정 및 PWM 초기화
 def setup_motor():
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(IN1, GPIO.OUT)
-    GPIO.setup(IN2, GPIO.OUT)
-    GPIO.setup(ENA, GPIO.OUT)
-    pwm = GPIO.PWM(ENA, 1000)
-    pwm.start(0)
-    return pwm
+    h = lgpio.gpiochip_open(0)  # /dev/gpiochip0 열기
+    lgpio.gpio_claim_output(h, IN1, 0)
+    lgpio.gpio_claim_output(h, IN2, 0)
+    lgpio.gpio_claim_output(h, ENA, 0)
+
+    # PWM 시작 (채널 0, dutyCycle은 0~1 사이)
+    lgpio.tx_pwm(h, ENA, 1000, 0)  # 1kHz, duty 0%
+    return h
 
 # 모터 작동 함수
-async def run_motor(pwm, duration=5, power=80):
+async def run_motor(h, duration=5, power=80):
     print(f"💧 수분 펌프 작동: {duration}초")
-    GPIO.output(IN1, GPIO.HIGH)
-    GPIO.output(IN2, GPIO.LOW)
-    pwm.ChangeDutyCycle(power)
+
+    lgpio.gpio_write(h, IN1, 1)
+    lgpio.gpio_write(h, IN2, 0)
+    lgpio.tx_pwm(h, ENA, 1000, power / 100)  # dutyCycle: 0~1
+
     await asyncio.sleep(duration)
-    GPIO.output(IN1, GPIO.LOW)
-    GPIO.output(IN2, GPIO.LOW)
-    pwm.ChangeDutyCycle(0)
+
+    lgpio.gpio_write(h, IN1, 0)
+    lgpio.gpio_write(h, IN2, 0)
+    lgpio.tx_pwm(h, ENA, 1000, 0)
+
     print("💧 수분 펌프 정지 완료")
 
 # GPIO 정리
-def cleanup_motor(pwm):
-    pwm.stop()
-    GPIO.cleanup()
+def cleanup_motor(h):
+    lgpio.gpiochip_close(h)
+
 
 async def main():
-    pwm = setup_motor()
+    h = setup_motor()
     try:
-        await run_motor(pwm, duration=5, power=80)  # 원하는 duration과 power로 설정 가능
+        await run_motor(h, duration=5, power=80)
     finally:
-        cleanup_motor(pwm)
+        cleanup_motor(h)
 
 if __name__ == "__main__":
     asyncio.run(main())
