@@ -2,8 +2,8 @@ from ggul_bot.Strawberry_Vision import detect_and_save,test_mode, test_mode2
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 #from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
-###from ggul_bot.Robot_Operation import process_joint_angles
-###from ggul_bot.Pollination import setup_motor, run_motor, cleanup_motor
+### from ggul_bot.Robot_Operation import process_joint_set
+#from ggul_bot.Pollination import run_motor
 import asyncio
 import json
 
@@ -65,7 +65,7 @@ async def main_loop():
             joint_data_list = []
             try:
                 while True:
-                    joint_data = await asyncio.wait_for(queue.get(), timeout=1)
+                    joint_data = await asyncio.wait_for(queue.get(), timeout=5)
                     joint_data_list.append(joint_data)
             except asyncio.TimeoutError:
                 pass  # 큐가 비었을 경우 멈춤
@@ -92,18 +92,18 @@ async def main_loop():
                         if joint_values and len(joint_values) == 6:
                             print(f"[INFO] Line {line_num}: Sending joint values {joint_values}")
                             # ✅ 로봇팔 작동
-                            process_joint_angles(joint_values)
+                            process_joint_set(joint_values)
                             # ✅ 모터 작동
-                            await run_motor(pwm, duration=5, power=80)
+                            #await run_motor(duration=5, power=0.75)
                             
                         else:
                             print(f"[WARNING] Line {line_num}: Invalid or missing 'joint_values'")
                     except json.JSONDecodeError as e:
                         print(f"[ERROR] Line {line_num}: JSON decode error: {e}")
-
+'''
             # ✅ 로봇팔 초기화
-            process_joint_angles(0,0,0,0,0,0)
-            '''
+            #process_joint_angles(0,0,0,0,0,0)
+            
             #-----------------5. 이동 부분----------------#
 
             i += 1

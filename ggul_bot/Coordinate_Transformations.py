@@ -43,9 +43,10 @@ def euler_to_dcm_deg(roll_deg, pitch_deg, yaw_deg):
     # 회전 행렬 계산: Rz @ Ry @ Rx
     return Rz @ Ry @ Rx
 
+'''
 def transform_coordinates60(
     file_path="detected_objects.json",
-    roll_deg=0, pitch_deg=0, yaw_deg=0,
+    roll_deg=-90, pitch_deg=0, yaw_deg=90,
     tx=0.0, ty=0.0, tz=0.0
 ):
     with open(file_path, "r") as f:
@@ -57,10 +58,13 @@ def transform_coordinates60(
 
     transformed = []
     for obj in data["detected_objects"]:
+
         # 픽셀 좌표를 미터로 변환 (기존 로직)
         x = (obj["X"] - 472) / 1000  # 100 픽셀은 10cm를 의미 즉 '100'을 0.1로 변환 해야 함
         y = -(obj["Y"] - 406) / 1000
-        z = obj["Z"] / 100 # 단위 10은 10cm를 의미 즉'10'을 0.1로 변환해야 함
+        z = -0.5 # 단위 10은 10cm를 의미 즉'10'을 0.1로 변환해야 함
+
+        
         P_cam = np.array([x, y, z])
 
         # 회전 및 이동 변환
@@ -75,6 +79,45 @@ def transform_coordinates60(
         })
 
     # 결과를 원본 데이터에 덮어쓰기
+    data["detected_objects"] = transformed
+    with open(file_path, "w") as f:
+        json.dump(data, f, indent=4)
+
+    return transformed
+'''
+
+def transform_coordinates60(
+    file_path="detected_objects.json",
+    tx=0.0, ty=0.0, tz=0.0
+):
+    with open(file_path, "r") as f:
+        data = json.load(f)
+
+    # 직접 지정된 회전 행렬: (x, y, z) → (z, -x, y)
+    R = np.array([
+        [0, 0, 1],
+        [-1, 0, 0],
+        [0, 1, 0]
+    ])
+    T = np.array([tx, ty, tz])
+
+    transformed = []
+    for obj in data["detected_objects"]:
+        # 픽셀 → 미터 단위로 변환
+        x = (obj["X"] - 472) / 1000
+        y = -(obj["Y"] - 406) / 1000
+        z = 0.5  # 고정된 깊이값
+
+        P_cam = np.array([x, y, z])
+        P_base = R @ P_cam + T
+
+        transformed.append({
+            "index": obj["index"],
+            "X": P_base[0],
+            "Y": P_base[1],
+            "Z": P_base[2]
+        })
+
     data["detected_objects"] = transformed
     with open(file_path, "w") as f:
         json.dump(data, f, indent=4)
