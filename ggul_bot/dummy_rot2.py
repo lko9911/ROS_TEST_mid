@@ -1,4 +1,3 @@
-import sys
 import time
 import odrive
 from odrive.enums import *
@@ -6,6 +5,7 @@ import math
 import can
 import struct
 from enum import IntEnum
+import json
 
 # CAN ID 생성 함수
 def generate_can_id(node_id: int, command_id: int) -> int:
@@ -50,6 +50,7 @@ class CommandID(IntEnum):
 def get_pos_estimate(bus: can.Bus, node_id: int) -> float:
     can_id = generate_can_id(node_id, CommandID.Get_Encoder_Estimates)
 
+
     # 위치 요청 전송
     msg = can.Message(arbitration_id=can_id, data=[], is_extended_id=False)
     try:
@@ -58,22 +59,20 @@ def get_pos_estimate(bus: can.Bus, node_id: int) -> float:
     except can.CanError as e:
         raise RuntimeError(f"[에러] CAN 메시지 전송 실패 (Node {node_id}): {e}")
 
-    # 응답 대기
-    expected_reply_id = generate_can_id(node_id, CommandID.Get_Encoder_Estimates)
+    # 응답 수신 (최대 0.01초 동안 대기)
     start_time = time.time()
-    while time.time() - start_time < 0.05:  # 50ms까지 대기
-        rx_msg = bus.recv(timeout= 0.05)
+    while time.time() - start_time < 0.05:
+        rx_msg = bus.recv(timeout=0.05)
         if rx_msg is None:
             continue
-        if rx_msg.arbitration_id != expected_reply_id:
-            continue  # 다른 노드의 응답이면 무시
         if len(rx_msg.data) < 4:
             continue
 
+        # 응답 데이터만 파싱 (ID는 무시)
         pos_estimate = struct.unpack('<f', rx_msg.data[0:4])[0]
         return pos_estimate
 
-    raise TimeoutError(f"[에러] Node {node_id} 응답 없음 (ID=0x{expected_reply_id:X})")
+    raise TimeoutError(f"[에러] Node {node_id} 응답 없음")
 
 
 #  odrv0.axis0.controller.input_pos 함수(CAN.ver)
@@ -86,10 +85,8 @@ def send_input_pos(bus: can.Bus, node_id: int, input_pos: float, vel_ff: float =
     msg = can.Message(arbitration_id=can_id, data=payload, is_extended_id=False)
     try:
         bus.send(msg)
-        print(f"[전송] Node {node_id} → 목표 위치 {input_pos:.2f} 전송 완료")
     except can.CanError as e:
-        print(f"[에러] Node {node_id} 위치 전송 실패: {e}")
-        raise
+        raise RuntimeError(f"CAN 전송 실패 (Node {node_id}): {e}")
 
 # odrv0.axis0.trap_traj.config.vel_limit 함수(CAN.ver)
 def send_traj_vel_limit(bus: can.Bus, node_id: int, vel_limit: float):
@@ -127,11 +124,10 @@ def motors_reached_target(bus: can.Bus, positions, tolerance: float) -> bool:
             all_reached = False
     return all_reached
 
-
-# Position - trajectory 제어 모드 설정 함수 (control_mode=3, input_mode=16)
+# 포지션 제어 모드 설정 함수 (control_mode=3, input_mode=16)
 def send_position_control_mode(bus: can.Bus, node_id: int):
     can_id = generate_can_id(node_id, CommandID.Set_Controller_Mode)
-    payload = b'\x03\x00\x00\x00' + b'\x05\x00\x00\x00'  # 3 = POSITION_CONTROL, 1 = PASSTHROUGH
+    payload = b'\x03\x00\x00\x00' + b'\x05\x00\x00\x00'  # 3 = POSITION_CONTROL, 5 = PASSTHROUGH
     msg = can.Message(arbitration_id=can_id, data=payload, is_extended_id=False)
     try:
         bus.send(msg)
@@ -162,19 +158,14 @@ def calculate_trap_traj_speeds(current_positions, target_positions_encoder, max_
     max_distance = max(distances)
 
     if max_distance == 0:
-        return [max_vel_limit] * 6, [max_accel_limit] * 6  # 모두 0 이동 시에도 최소값 유지
+        return [0] * 6, [0] * 6
 
-    speed_limits = []
-    accel_limits = []
-
-    for distance in distances:
-        ratio = distance / max_distance
-        vel = max((ratio * max_vel_limit), 1.0)      # 최소 속도 제한 (예: 3.0)
-        accel = max((ratio * max_accel_limit), 1.0)  # 최소 가속도 제한 (예: 3.0)
-        speed_limits.append(vel)
-        accel_limits.append(accel)
+    speed_limits = [(distance / max_distance) * max_vel_limit for distance in distances]
+    accel_limits = [(distance / max_distance) * max_accel_limit for distance in distances]
 
     return speed_limits, accel_limits
+
+
 
 # ================================================
 # 조인트 세트 처리 함수
@@ -182,12 +173,12 @@ def calculate_trap_traj_speeds(current_positions, target_positions_encoder, max_
 def process_joint_set(joint_angles):
     print(f"\nProcessing joint angles: {joint_angles}")
 
-    joint_angles = [math.degrees(angle) for angle in joint_angles]
-    print(f"Converted joint angles to degrees: {joint_angles}")
-    
     if len(joint_angles) < 6:
         print('Not enough joint angles received.')
         return
+    
+    joint_angles = [math.degrees(angle) for angle in joint_angles]
+    print(f"Converted joint angles to degrees: {joint_angles}")
 
     reduction_ratios = [
         reduction_ratio_0,
@@ -209,11 +200,11 @@ def process_joint_set(joint_angles):
 
     current_positions = [get_pos_estimate(bus, node) for node in NodeID]
 
-    # 최대 속도/가속 제한 설정
+   # 최대 속도/가속 제한 설정
     max_vel_limit = 9
     max_accel_limit = 8.5
 
-    # 속도/가속도 설정 계산
+    # current_positions, target_positions_encoder 는 기존에 계산됨
     speed_limits, accel_limits = calculate_trap_traj_speeds(
         current_positions, target_positions_encoder, max_vel_limit, max_accel_limit
     )
@@ -221,46 +212,35 @@ def process_joint_set(joint_angles):
     # 각 노드에 속도/가속 설정 전송
     for i, node_id in enumerate(NodeID):
         send_traj_vel_limit(bus, node_id, speed_limits[i])
-        send_traj_accel_limits(bus, node_id, accel_limits[i], accel_limits[i])
+        send_traj_accel_limits(bus, node_id, accel_limits[i], accel_limits[i])  # accel == decel
 
-    # 목표 위치 명령 한 번에 전송
+
+    # 목표 위치 명령
     for i, node_id in enumerate(NodeID):
-        try:
-            print(f"[명령] Node {node_id} → 목표 위치: {target_positions[i]:.2f}")
-            send_input_pos(bus, node_id, target_positions[i])
-        except Exception as e:
-            print(f"[오류] Node {node_id} 위치 명령 실패: {e}")
+        time.sleep(0.01)  
+        send_input_pos(bus, node_id, target_positions[i])
+        time.sleep(0.01)
 
     print("Motors are moving...")
 
-    retry_count = 0
     while not motors_reached_target(bus, target_positions, TOLERANCE):
-        time.sleep(0.01)
-        retry_count += 1
-        if retry_count > 200:
-            print("[경고] 반복 초과. 일부 노드가 도달하지 않았을 수 있습니다.")
-            break
+        time.sleep(0.1)
 
     print("Motors have reached their target positions.")
+    time.sleep(3)
 
-# ================================================
-# ODrive 설정 관련 상수 및 함수
-# ================================================
-CHANNEL = 'COM3'
-BITRATE = 250000
-
+# 1. CAN 인터페이스 연결
 try:
-    bus = can.interface.Bus(interface='slcan', channel=CHANNEL, bitrate=BITRATE) # CAN BUS 연결 확인
+    bus = can.interface.Bus(interface='slcan', channel='COM3', bitrate = 250000)  # slcan0 인터페이스 사용
     print("[INFO] CAN 버스 연결 성공")
 except Exception as e:
     print(f"[ERROR] CAN 버스 초기화 실패: {e}")
-    sys.exit(1)
+    exit(1)
 
-
-TOLERANCE = 1
+# 2. ODrive 초기화
+TOLERANCE = 2
 encoder_ppr = 8192
 
-# 감속비
 reduction_ratio_0 = -46.003
 reduction_ratio_1 = -46.003
 reduction_ratio_2 = 28.4998
@@ -268,11 +248,8 @@ reduction_ratio_3 = 5.5
 reduction_ratio_4 = -5
 reduction_ratio_5 = 5
 
-
-# 포지션 제어 모드로 설정
+# 모든 노드에 Position Control 모드 및 Closed Loop 상태 설정
 for node in NodeID:
     send_position_control_mode(bus, node)
+    send_closed_loop_state(bus, node)
 
-# Closed loop 컨트롤 제어 모드로 설정
-#for node in NodeID:
-    #send_closed_loop_state(bus, node) 

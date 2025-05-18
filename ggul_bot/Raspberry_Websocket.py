@@ -10,7 +10,7 @@ def load_detected_objects(file_path="detected_objects.json"):
 
 # ───── 클라이언트: 좌표 전송 ─────
 async def send_detected_objects():
-    uri = "ws://192.168.105.77:8765"  # 좌표 받는 쪽
+    uri = "ws://192.168.219.77:8765"  # 좌표 받는 쪽
     detected = load_detected_objects()
 
     if not detected.get("detected_objects"):

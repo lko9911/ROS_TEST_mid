@@ -2,8 +2,8 @@ from ggul_bot.Strawberry_Vision import detect_and_save,test_mode, test_mode2
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 #from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
-### from ggul_bot.Robot_Operation import process_joint_set
-#from ggul_bot.Pollination import run_motor
+###from ggul_bot.Robot_Operation import process_joint_set
+###from ggul_bot.Pollination import run_motor
 import asyncio
 import json
 
@@ -14,7 +14,7 @@ async def main_loop():
     json_path = "detected_objects.json"
 
     queue = asyncio.Queue()  # 큐 생성
-    ###pwm = setup_motor()  # ✅ 모터 초기화
+    ###pwm = setup_motor()  # ✅ 모터 초기화, RPi.GPIO 방식이므로 구동 문제 없으면 없애기
 
     # WebSocket 서버 실행 (큐 공유)
     asyncio.create_task(start_joint_state_server(queue))
@@ -94,16 +94,20 @@ async def main_loop():
                             # ✅ 로봇팔 작동
                             process_joint_set(joint_values)
                             # ✅ 모터 작동
-                            #await run_motor(duration=5, power=0.75)
+                            await run_motor(duration=5, power=0.75)
+                            # ✅ 로봇팔 초기화
+                            process_joint_set([-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
+
+                            ## await asyncio.sleep(10)  필요시 중간에 넣을 것 
                             
                         else:
                             print(f"[WARNING] Line {line_num}: Invalid or missing 'joint_values'")
                     except json.JSONDecodeError as e:
                         print(f"[ERROR] Line {line_num}: JSON decode error: {e}")
-'''
+
             # ✅ 로봇팔 초기화
-            #process_joint_angles(0,0,0,0,0,0)
-            
+            #process_joint_angles([-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
+            '''
             #-----------------5. 이동 부분----------------#
 
             i += 1
@@ -113,7 +117,7 @@ async def main_loop():
         print("🔚 프로그램 종료됨.")
     ### finally:
        ### cleanup_motor(pwm)
-       ### print("🔌 GPIO 리셋 완료")
+       ### print("🔌 GPIO 리셋 완료") # ✅ 모터 초기화, RPi.GPIO 방식이므로 구동 문제 없으면 없애기
 
 # 메인 실행
 if __name__ == "__main__":
