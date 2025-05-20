@@ -6,7 +6,7 @@ import asyncio
 # 핀 설정 (BCM 번호)
 IN1 = DigitalOutputDevice(17)
 IN2 = DigitalOutputDevice(27)
-ENA = PWMOutputDevice(18, frequency=1000)
+ENA = PWMOutputDevice(13, frequency=1000)
 
 # 모터 작동 함수 (비동기)
 async def run_motor(duration=5, power=0.8):
@@ -24,8 +24,6 @@ async def run_motor(duration=5, power=0.8):
     ENA.off()
     IN1.off()
     IN2.off()
-
-    await asyncio.sleep(duration+10)
 
     print("💧 수분 펌프 정지 완료")
 
