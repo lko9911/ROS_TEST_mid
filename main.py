@@ -2,7 +2,7 @@ from ggul_bot.Strawberry_Vision import detect_and_save,test_mode, test_mode2
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 #from ggul_bot.Classify_Disease import detect_and_show
 from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
-from ggul_bot.Robot_Operation import process_joint_set, initialize_nodes
+#from ggul_bot.Robot_Operation import process_joint_set, initialize_nodes
 #from ggul_bot.Pollination import run_motor
 import asyncio
 import json
@@ -11,17 +11,18 @@ import can
 import os
 import sys
 
-CHANNEL = 'COM3'
-BITRATE = 250000
+#CHANNEL = 'COM3'
+#BITRATE = 250000
 
 async def main_loop():
+    '''
     try:
         bus = can.interface.Bus(interface='slcan', channel=CHANNEL, bitrate=BITRATE)
         print("[INFO] CAN 버스 연결 성공")
     except Exception as e:
         print(f"[ERROR] CAN 버스 초기화 실패: {e}")
         sys.exit(1)
-    
+    '''
     
     yolo_path = "model/yolov10x.pt"
     npz_path = "stereo_calibration_result_test.npz"
@@ -43,9 +44,8 @@ async def main_loop():
 
 
             print(f"\n========== [{i}번째 주기 시작] ==========")
-            initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
-            process_joint_set(bus,[-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
-            #process_joint_set([0,0,0,0,0,0])
+            #initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
+            #process_joint_set(bus,[-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
 
             await asyncio.sleep(5)
 
@@ -115,15 +115,16 @@ async def main_loop():
                             print(f"[INFO] Line {line_num}: Sending joint values {joint_values}")
                             
                             # ✅ 로봇팔 작동
-                            initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
-                            process_joint_set(bus,joint_values)
+                            #initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
+                            #process_joint_set(bus,joint_values)
                             await asyncio.sleep(5)
+                            
                             # ✅ 모터 작동
                             #await run_motor(duration=10, power=0.75)
 
                             # ✅ 로봇팔 초기화
-                            initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
-                            process_joint_set(bus, [-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
+                            #initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
+                            #process_joint_set(bus, [-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
 
                             await asyncio.sleep(3)
                             ## await asyncio.sleep(10)  필요시 중간에 넣을 것 
@@ -144,9 +145,6 @@ async def main_loop():
 
     except KeyboardInterrupt:
         print("🔚 프로그램 종료됨.")
-    ### finally:
-       ### cleanup_motor(pwm)
-       ### print("🔌 GPIO 리셋 완료") # ✅ 모터 초기화, RPi.GPIO 방식이므로 구동 문제 없으면 없애기
 
 # 메인 실행
 if __name__ == "__main__":

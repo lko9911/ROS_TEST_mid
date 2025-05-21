@@ -3,6 +3,15 @@ import websockets
 import json
 from functools import partial
 
+'''
+8765 : 좌표 전송 포트
+8766 : IK 계산 받는 포트
+8767 : 로봇팔 동작 완료 포트
+'''
+
+raspberrypi_uri_detect = "ws://192.168.219.78:8765"
+raspberrypi_uri_done = "ws://192.168.219.78:8767"    
+
 # ───── JSON 로드 함수 ─────
 def load_detected_objects(file_path="detected_objects.json"):
     with open(file_path, "r") as f:
@@ -10,7 +19,7 @@ def load_detected_objects(file_path="detected_objects.json"):
 
 # ───── 클라이언트: 좌표 전송 ─────
 async def send_detected_objects():
-    uri = "ws://192.168.219.78:8765"  # 좌표 받는 쪽
+    uri = raspberrypi_uri_detect  # 좌표 받는 쪽
     detected = load_detected_objects()
 
     if not detected.get("detected_objects"):
@@ -29,6 +38,19 @@ async def send_detected_objects():
             await websocket.send(json.dumps(data))
             response = await websocket.recv()
             print(f"[index {obj['index']}] 서버 응답: {response}")
+
+# ───── 클라이언트: 로봇팔 엔드이펙터 완료 정보 전송 ─────
+async def send_done_device():
+    uri = raspberrypi_uri_done # 서버 URI
+
+    await asyncio.sleep(1)  # 서버 연결 준비 시간 확보
+
+    async with websockets.connect(uri) as websocket:
+        done_message = "DONE"
+        await websocket.send(done_message)  # 문자열로 완료 전송
+        response = await websocket.recv()   # 응답 받기
+        print(f"✅ 서버 응답: {response}")
+
 
 # ───── 서버: 조인트 상태 수신 ─────
 async def receive_joint_states(websocket,queue):
