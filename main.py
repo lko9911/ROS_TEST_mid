@@ -1,7 +1,7 @@
 from ggul_bot.Strawberry_Vision import detect_and_save,test_mode, test_mode2
 from ggul_bot.Coordinate_Transformations import load_detected_objects_test, print_detected_objects_test, transform_coordinates60
 #from ggul_bot.Classify_Disease import detect_and_show
-from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server
+from ggul_bot.Raspberry_Websocket import send_detected_objects, start_joint_state_server, send_done_device
 #from ggul_bot.Robot_Operation import process_joint_set, initialize_nodes
 #from ggul_bot.Pollination import run_motor
 import asyncio
@@ -30,7 +30,6 @@ async def main_loop():
     json_path = "detected_objects.json"
 
     queue = asyncio.Queue()  # 큐 생성
-    ###pwm = setup_motor()  # ✅ 모터 초기화, RPi.GPIO 방식이므로 구동 문제 없으면 없애기
 
     # WebSocket 서버 실행 (큐 공유)
     asyncio.create_task(start_joint_state_server(queue))
@@ -100,9 +99,6 @@ async def main_loop():
                         f.write(json.dumps(jd) + "\n")
             else:
                 print(f"[{i}] 이번 주기에는 조인트 상태가 도착하지 않았습니다.")
-
-            
-            
             
             #-----------------4. 로봇팔 + 수분 장치 구동 부분----------------#
             log_file_path = "joint_states_log.json"
@@ -117,16 +113,17 @@ async def main_loop():
                             # ✅ 로봇팔 작동
                             #initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
                             #process_joint_set(bus,joint_values)
-                            await asyncio.sleep(5)
+                            #await asyncio.sleep(5)
                             
                             # ✅ 모터 작동
+                            send_done_device()
                             #await run_motor(duration=10, power=0.75)
 
                             # ✅ 로봇팔 초기화
                             #initialize_nodes(bus, [0, 1, 2, 3, 4, 5])
                             #process_joint_set(bus, [-3.142, 0.873, -2.094, -1.222, -1.5708, 0])
 
-                            await asyncio.sleep(3)
+                            #await asyncio.sleep(3)
                             ## await asyncio.sleep(10)  필요시 중간에 넣을 것 
                             
                         else:
